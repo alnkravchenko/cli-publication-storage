@@ -98,3 +98,11 @@ instance Ord Publisher where
   (PublishingHouse name1) `compare` (PublishingHouse name2) = name1 `compare` name2
   (Journal name1 _ _) `compare` (Journal name2 _ _)         = name1 `compare` name2
   (Conference name1 _) `compare` (Conference name2 _)       = name1 `compare` name2
+
+
+splitOn :: Char -> String -> [String]
+splitOn delimiter str =
+    let (prefix, suffix) = break (== delimiter) str
+    in  case suffix of
+            "" -> [prefix]
+            _  -> prefix : splitOn delimiter (tail suffix)
