@@ -1,10 +1,10 @@
 {-# LANGUAGE InstanceSigs #-}
+
 module PublicationsService where
 
-import Data.Data (Data (dataTypeOf, toConstr), cast, showConstr, typeOf)
-import Data.List (intercalate)
-import Data.Set  (Set, fromList, toList)
-
+import Data.Data            (Data (dataTypeOf, toConstr), cast, showConstr, typeOf)
+import Data.List            (intercalate)
+import Data.Set             (Set, fromList, toList)
 import Helpers
     (Person, Publisher (PublishingHouse, publisherName), containsAuthor, lenAuthors)
 import Publication          (Publication (Article, Book, Summary))
@@ -21,13 +21,13 @@ data PublicationsService a = StorePublications { publications :: [a]
 instance (Show a) => Show (PublicationsService a) where
   show :: PublicationsService a -> String
   show (StorePublications ps db) =
-    let createOrderNums = map (\x -> show x ++ ") ") [1..length ps]
-    in "Database folder: " ++ show db ++ "\n" ++ intercalate "\n" (zipWith (++) createOrderNums (map show ps))
+    let createOrderNums = map (\x -> show x ++ ") ") [1 .. length ps]
+     in "Database folder: " ++ show db ++ "\n" ++ intercalate "\n" (zipWith (++) createOrderNums (map show ps))
 
 instance Semigroup (PublicationsService a) where
   (<>) :: PublicationsService a -> PublicationsService a -> PublicationsService a
-  (<>) storage (StorePublications [] _)                     = storage
-  (<>) (StorePublications [] _) storage                     = storage
+  (<>) storage (StorePublications [] _) = storage
+  (<>) (StorePublications [] _) storage = storage
   (<>) (StorePublications p1 db) (StorePublications p2 _) = StorePublications (p1 ++ p2) db
 
 instance Monoid (PublicationsService a) where
@@ -55,7 +55,7 @@ class PubStorageUtils a where
   createStorage :: String -> a
   getCategoryByTitle :: a -> String -> [String]
   searchByAuthor :: a -> Person -> a
-  searchByAuthorExcl :: a ->  Person -> a
+  searchByAuthorExcl :: a -> Person -> a
   findAllPublishingHouses :: a -> Set Publisher
   findAllJournals :: a -> Set Publisher
   findAllConferences :: a -> Set Publisher
@@ -72,24 +72,24 @@ hasTitle x titleToFind =
 hasAuthor :: Data a => a -> Person -> Bool
 hasAuthor x person =
   case cast x of
-  Just (Book creator _ _ _ _)    -> containsAuthor creator person
-  Just (Article creator _ _ _)   -> containsAuthor creator person
-  Just (Summary creator _ _ _ _) -> containsAuthor creator person
-  _                              -> False
+    Just (Book creator _ _ _ _)    -> containsAuthor creator person
+    Just (Article creator _ _ _)   -> containsAuthor creator person
+    Just (Summary creator _ _ _ _) -> containsAuthor creator person
+    _                              -> False
 
 hasOneCreator :: Data a => a -> Bool
 hasOneCreator x =
   case cast x of
-  Just (Book creator _ _ _ _)    -> lenAuthors creator == 1
-  Just (Article creator _ _ _)   -> lenAuthors creator == 1
-  Just (Summary creator _ _ _ _) -> lenAuthors creator == 1
-  _                              -> False
+    Just (Book creator _ _ _ _)    -> lenAuthors creator == 1
+    Just (Article creator _ _ _)   -> lenAuthors creator == 1
+    Just (Summary creator _ _ _ _) -> lenAuthors creator == 1
+    _                              -> False
 
 getConstructorName :: Data a => a -> String
 getConstructorName x =
   let dataType = dataTypeOf x
       constructor = toConstr x
-  in showConstr constructor
+   in showConstr constructor
 
 filterByPublicationType :: Data a => PublicationsService a -> String -> [a]
 filterByPublicationType (StorePublications ps _) pubType =
@@ -98,17 +98,17 @@ filterByPublicationType (StorePublications ps _) pubType =
 getPublisher :: Data a => a -> Publisher
 getPublisher x =
   case cast x of
-  Just (Book _ _ _ publisherName _)    -> publisherName
-  Just (Article _ _ publisherName _)   -> publisherName
-  Just (Summary _ _ publisherName _ _) -> publisherName
-  _                                    -> PublishingHouse ""
+    Just (Book _ _ _ publisherName _)    -> publisherName
+    Just (Article _ _ publisherName _)   -> publisherName
+    Just (Summary _ _ publisherName _ _) -> publisherName
+    _                                    -> PublishingHouse ""
 
 findAllPublishers :: Data a => PublicationsService a -> String -> Set Publisher
 findAllPublishers storage pubType =
   let filtered = filterByPublicationType storage pubType
       publishers = map getPublisher filtered
       notEmpty = filter (\x -> not (null $ publisherName x)) publishers
-  in fromList notEmpty
+   in fromList notEmpty
 
 instance Data a => PubStorageUtils (PublicationsService a) where
   createStorage :: String -> PublicationsService a
@@ -117,17 +117,17 @@ instance Data a => PubStorageUtils (PublicationsService a) where
   getCategoryByTitle :: Data a => PublicationsService a -> String -> [String]
   getCategoryByTitle (StorePublications ps _) pubTitle =
     let filtered = filter (`hasTitle` pubTitle) ps
-    in map getConstructorName filtered
+     in map getConstructorName filtered
 
   searchByAuthor :: PublicationsService a -> Person -> PublicationsService a
   searchByAuthor (StorePublications ps db) author =
     let filtered = filter (`hasAuthor` author) ps
-    in StorePublications filtered db
+     in StorePublications filtered db
 
   searchByAuthorExcl :: PublicationsService a -> Person -> PublicationsService a
   searchByAuthorExcl (StorePublications ps db) author =
-    let filtered = filter (\x -> hasOneCreator x && x `hasAuthor`author) ps
-    in StorePublications filtered db
+    let filtered = filter (\x -> hasOneCreator x && x `hasAuthor` author) ps
+     in StorePublications filtered db
 
   findAllPublishingHouses :: Data a => PublicationsService a -> Set Publisher
   findAllPublishingHouses storage = findAllPublishers storage "Book"
@@ -144,5 +144,5 @@ instance Data a => PubStorageUtils (PublicationsService a) where
         filteredLen = fromIntegral $ length filtered
         totalLen = fromIntegral $ length storage
         amount = ["Amount of ", pubType, ": ", show (length filtered)]
-        percentage = ["Percentage from all publications: ", show (round (filteredLen / totalLen  * 100)), "%"]
-    in intercalate "\n" $ map concat [amount, percentage]
+        percentage = ["Percentage from all publications: ", show (round (filteredLen / totalLen * 100)), "%"]
+     in intercalate "\n" $ map concat [amount, percentage]
