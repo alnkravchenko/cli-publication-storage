@@ -2,10 +2,9 @@
 module CLI where
 
 import Data.Data            (Data)
-import Data.List.Split      (splitOn)
 import Data.Set             (showTree)
 import FilesystemUtils      (createFile)
-import Helpers              (Person (Person))
+import Helpers              (Person (Person), splitOn)
 import PublicationsDatabase
     (CRUDUtils (..), DBConfig (..), Database (..), Entity (..), ID, TableName)
 import PublicationsService  (PubStorageUtils (..), PublicationsService (..))
@@ -17,7 +16,7 @@ type Fields = [String]
 data Command
   = GetCategory TableName String
   | SearchByAuthor TableName String String
-  | SearchByAuthorExcl TableName String String
+  | SearchByAuthorExcl TableName String Stringw
   | FindAllPublishingHouses TableName
   | FindAllJournals TableName
   | FindAllConferences TableName
@@ -53,14 +52,10 @@ parseCommand ["find-all-journals", tableName] = FindAllJournals tableName
 parseCommand ["find-all-conferences", tableName] = FindAllConferences tableName
 parseCommand ["get-stats-by-publication-type", tableName, publicationType] = GetStatsByPublicationType tableName publicationType
 parseCommand ["create-table", tableName] = CreateTable tableName
--- | InsertPublication TableName Type Fields
--- | DeletePublication TableName ID
--- | UpdatePublication TableName ID Fields
--- | SelectPublication TableName ID
-parseCommand ["insert", tableName] = CreateTable tableName
-parseCommand ["delete", tableName, id] = CreateTable tableName
+parseCommand ["insert", tableName, pubType, fields] = InsertPublication tableName pubType (splitOn "," fields)
+parseCommand ["delete", tableName, id] = DeletePublication tableName (read id)
 parseCommand ["update", tableName, id, fields] = UpdatePublication tableName (read id) (splitOn "," fields)
-parseCommand ["select", tableName, id] = CreateTable tableName
+parseCommand ["select", tableName, id] = SelectPublication tableName (read id)
 parseCommand _ = Help
 
 selectAllFromTable :: (Data a, Show a) => PublicationsService a -> TableName -> [a]
@@ -68,9 +63,9 @@ selectAllFromTable storage tableName =
   let db = database storage
       maybeData = selectAll db tableName
       parsedData = case maybeData of
-                    Just val -> map obj val
-                    Nothing  -> []
-  in parsedData
+        Just val -> map obj val
+        Nothing  -> []
+   in parsedData
 
 -- implementation for PublicationsService
 processCommand :: (Data a, Show a) => PublicationsService a -> Command -> IO String
@@ -78,50 +73,38 @@ processCommand storage (GetCategory tableName title) = do
   let parsedData = selectAllFromTable storage tableName
   let filledStorage = StorePublications parsedData (database storage)
   return (show $ getCategoryByTitle filledStorage title)
-
 processCommand storage (SearchByAuthor tableName firstName lastName) = do
   let parsedData = selectAllFromTable storage tableName
   let filledStorage = StorePublications parsedData (database storage)
   return (show $ searchByAuthor filledStorage (Person firstName lastName))
-
 processCommand storage (SearchByAuthorExcl tableName firstName lastName) = do
   let parsedData = selectAllFromTable storage tableName
   let filledStorage = StorePublications parsedData (database storage)
   return (show $ searchByAuthorExcl filledStorage (Person firstName lastName))
-
 processCommand storage (FindAllPublishingHouses tableName) = do
   let parsedData = selectAllFromTable storage tableName
   let filledStorage = StorePublications parsedData (database storage)
   return (showTree $ findAllPublishingHouses filledStorage)
-
 processCommand storage (FindAllJournals tableName) = do
   let parsedData = selectAllFromTable storage tableName
   let filledStorage = StorePublications parsedData (database storage)
   return (showTree $ findAllJournals filledStorage)
-
 processCommand storage (FindAllConferences tableName) = do
   let parsedData = selectAllFromTable storage tableName
   let filledStorage = StorePublications parsedData (database storage)
   return (showTree $ findAllConferences filledStorage)
-
 processCommand storage (GetStatsByPublicationType tableName publicationType) = do
   let parsedData = selectAllFromTable storage tableName
   let filledStorage = StorePublications parsedData (database storage)
   return (getStatsByPublicationType filledStorage publicationType)
-
-processCommand storage (CreateTable tableName) = do
-  let dbPath = path $ config $ database storage
-  createFile dbPath (tableName ++ ".csv")
-
-
+processCommand storage (CreateTable tableName) = do createTable storage tableName
 processCommand _ Help = do
-  return "Available commands:\n\
-  \  quit - close CLI\n\
-  \  get-category [table name] [title]\n\
-  \  search-by-author [table name] [first name] [last name] [exclude]\n\
-  \  find-all-publishing-houses [table name]\n\
-  \  find-all-journals [table name]\n\
-  \  find-all-conferences [table name]\n\
-  \  get-stats-by-publication-type [table name] [publication type]"
-
-
+  return
+    "Available commands:\n\
+    \  quit - close CLI\n\
+    \  get-category [table name] [title]\n\
+    \  search-by-author [table name] [first name] [last name] [exclude]\n\
+    \  find-all-publishing-houses [table name]\n\
+    \  find-all-journals [table name]\n\
+    \  find-all-conferences [table name]\n\
+    \  get-stats-by-publication-type [table name] [publication type]"
