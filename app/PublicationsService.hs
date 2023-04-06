@@ -1,14 +1,19 @@
 {-# LANGUAGE InstanceSigs #-}
-
+{-# LANGUAGE ConstrainedClassMethods #-}
 module PublicationsService where
 
-import Data.Data            (Data (dataTypeOf, toConstr), cast, showConstr, typeOf)
-import Data.List            (intercalate)
-import Data.Set             (Set, fromList, toList)
-import Helpers
+import qualified Control.Applicative as Map
+import           Data.Data
+    (Data (dataTypeOf, toConstr), cast, showConstr, typeOf)
+import           Data.List           (intercalate)
+import           Data.Map            (Map)
+import qualified Data.Map            as Map
+import           Data.Set            (Set, fromList, toList)
+import           Database            (DBConfig (DBConfig), Database (CreateDBConnection))
+import           Helpers
     (Person, Publisher (PublishingHouse, publisherName), containsAuthor, lenAuthors)
-import Publication          (Publication (Article, Book, Summary))
-import PublicationsDatabase (DBConfig (DBConfig), Database (CreateDBConnection))
+import           Publication
+    (Publication (Article, Book, Summary), createFromMap, Mappable)
 
 -- Серед методiв створених класiв має бути хоча б один оператор.
 -- Створенi типи даних треба оголосити екземплярами створених та iнших вiдповiдних класiв,
@@ -60,6 +65,7 @@ class PubStorageUtils a where
   findAllJournals :: a -> Set Publisher
   findAllConferences :: a -> Set Publisher
   getStatsByPublicationType :: a -> String -> String
+  parseFromMap :: Database -> Map String String -> a
 
 hasTitle :: Data a => a -> String -> Bool
 hasTitle x titleToFind =
@@ -110,7 +116,7 @@ findAllPublishers storage pubType =
       notEmpty = filter (\x -> not (null $ publisherName x)) publishers
    in fromList notEmpty
 
-instance Data a => PubStorageUtils (PublicationsService a) where
+instance (Mappable a, Data a) => PubStorageUtils (PublicationsService a) where
   createStorage :: String -> PublicationsService a
   createStorage dbPath = StorePublications [] (CreateDBConnection (DBConfig dbPath))
 
@@ -146,3 +152,13 @@ instance Data a => PubStorageUtils (PublicationsService a) where
         amount = ["Amount of ", pubType, ": ", show (length filtered)]
         percentage = ["Percentage from all publications: ", show (round (filteredLen / totalLen * 100)), "%"]
      in intercalate "\n" $ map concat [amount, percentage]
+
+  parseFromMap :: (Mappable a) => Database -> Map String String -> PublicationsService a
+  parseFromMap db m        = StorePublications [entity] db
+    where keys = Map.keys m
+          values = Map.elems m
+          entityType = case keys of
+            ["creator", "title", "city", "bookPublisher", "year"]    -> "Book"
+            ["creator", "title", "articlePublisher", "year"]         -> "Article"
+            ["creator", "title", "city", "summaryPublisher", "year"] -> "Summary"
+          entity = createFromMap (entityType : values)

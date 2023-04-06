@@ -1,14 +1,14 @@
 {-# LANGUAGE InstanceSigs #-}
 module CLI where
 
-import Data.Data            (Data)
-import Data.Set             (showTree)
-import FilesystemUtils      (createFile)
-import Helpers              (Person (Person), splitOn)
-import PublicationsDatabase
+import Data.Data           (Data)
+import Data.Set            (showTree)
+import Database
     (CRUDUtils (..), DBConfig (..), Database (..), Entity (..), ID, TableName)
-import PublicationsService  (PubStorageUtils (..), PublicationsService (..))
-import System.Directory     (createDirectoryIfMissing)
+import FilesystemUtils     (createFile)
+import Helpers             (Person (Person), splitOn)
+import PublicationsService (PubStorageUtils (..), PublicationsService (..))
+import System.Directory    (createDirectoryIfMissing)
 
 type Type = String
 type Fields = [String]
@@ -16,12 +16,12 @@ type Fields = [String]
 data Command
   = GetCategory TableName String
   | SearchByAuthor TableName String String
-  | SearchByAuthorExcl TableName String Stringw
+  | SearchByAuthorExcl TableName String String
   | FindAllPublishingHouses TableName
   | FindAllJournals TableName
   | FindAllConferences TableName
   | GetStatsByPublicationType TableName String
-  | CreateTable TableName
+  | CreateTable TableName String
   | InsertPublication TableName Type Fields
   | DeletePublication TableName ID
   | UpdatePublication TableName ID Fields
@@ -51,10 +51,10 @@ parseCommand ["find-all-publishing-houses", tableName] = FindAllPublishingHouses
 parseCommand ["find-all-journals", tableName] = FindAllJournals tableName
 parseCommand ["find-all-conferences", tableName] = FindAllConferences tableName
 parseCommand ["get-stats-by-publication-type", tableName, publicationType] = GetStatsByPublicationType tableName publicationType
-parseCommand ["create-table", tableName] = CreateTable tableName
-parseCommand ["insert", tableName, pubType, fields] = InsertPublication tableName pubType (splitOn "," fields)
+parseCommand ["create-table", tableName, fields] = CreateTable tableName fields
+parseCommand ["insert", tableName, pubType, fields] = InsertPublication tableName pubType (splitOn ',' fields)
 parseCommand ["delete", tableName, id] = DeletePublication tableName (read id)
-parseCommand ["update", tableName, id, fields] = UpdatePublication tableName (read id) (splitOn "," fields)
+parseCommand ["update", tableName, id, fields] = UpdatePublication tableName (read id) (splitOn ',' fields)
 parseCommand ["select", tableName, id] = SelectPublication tableName (read id)
 parseCommand _ = Help
 
@@ -63,7 +63,7 @@ selectAllFromTable storage tableName =
   let db = database storage
       maybeData = selectAll db tableName
       parsedData = case maybeData of
-        Just val -> map obj val
+        Just val -> map ((parseFromMap db) . vals) val
         Nothing  -> []
    in parsedData
 
@@ -97,7 +97,7 @@ processCommand storage (GetStatsByPublicationType tableName publicationType) = d
   let parsedData = selectAllFromTable storage tableName
   let filledStorage = StorePublications parsedData (database storage)
   return (getStatsByPublicationType filledStorage publicationType)
-processCommand storage (CreateTable tableName) = do createTable storage tableName
+processCommand storage (CreateTable tableName fields) = do return (show $ createTable storage tableName fields)
 processCommand _ Help = do
   return
     "Available commands:\n\
