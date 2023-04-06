@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-module PublicationsDatabase where
+module Database where
 
 import           Data.Data        (Data)
 import           Data.List        (elemIndex)
