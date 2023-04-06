@@ -2,8 +2,9 @@
 {-# LANGUAGE InstanceSigs #-}
 module Helpers where
 
-import Data.Data (Data)
-import Data.List (intercalate)
+import Data.Char         (toLower)
+import Data.Data         (Data)
+import Data.List         (intercalate)
 
 -- task 1
 -- Оголосити необхiднi типи даних i класи типiв для роботи з базою даних.
@@ -27,7 +28,7 @@ newtype Creator
 
 instance Show Creator where
   show :: Creator -> String
-  show (Authors people) =  intercalate ", " $ map show people
+  show (Authors people) =  intercalate "," $ map show people
 
 containsAuthor :: Creator -> Person -> Bool
 containsAuthor (Authors authors) person = person `elem` authors
@@ -35,6 +36,11 @@ containsAuthor (Authors authors) person = person `elem` authors
 lenAuthors :: Creator -> Int
 lenAuthors (Authors authors) = length authors
 
+strToCreator :: String -> Creator
+strToCreator str = parsedCreator
+  where parsedCreatorData = splitOn ',' str
+        toPerson str = Person (head $ words str) (last $ words str)
+        parsedCreator = Authors (map toPerson parsedCreatorData)
 
 data Country
   = Ukraine
@@ -48,6 +54,20 @@ data Country
   | Australia
   | Canada
   deriving (Data, Eq, Show)
+
+strToCountry :: String -> Country
+strToCountry str = case map toLower str of
+  "ukraine"   -> Ukraine
+  "germany"   -> Germany
+  "uk"        -> UK
+  "usa"       -> USA
+  "france"    -> France
+  "italy"     -> Italy
+  "spain"     -> Spain
+  "sweden"    -> Sweden
+  "australia" -> Australia
+  "canada"    -> Canada
+  _           -> Ukraine
 
 newtype City
   = City (String, Country)
