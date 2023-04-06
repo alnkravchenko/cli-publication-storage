@@ -1,7 +1,7 @@
 module FilesystemUtils where
 
-import Data.List (intercalate)
-import Helpers   (splitOn)
+import Data.List         (intercalate)
+import Helpers           (splitOn)
 import System.IO
     ( IOMode (AppendMode, ReadMode, WriteMode)
     , hClose
@@ -10,8 +10,9 @@ import System.IO
     , hPutStrLn
     , openFile
     )
+import Text.HTML.TagSoup
 
-type Row = [String]
+type CSVRow = [String]
 
 createFile :: String -> String -> IO String
 createFile folderPath fileName = do
@@ -39,7 +40,7 @@ readMyFile filePath = do
   hClose handle
   return content
 
-writeRowToCSV :: String -> Row -> IO ()
+writeRowToCSV :: String -> CSVRow -> IO ()
 writeRowToCSV filePath row = writeToFile filePath (intercalate "," row)
 
 writeToTXT :: String -> String -> IO ()
@@ -47,11 +48,10 @@ writeToTXT = writeToFile
 
 writeToHTML :: String -> String -> IO ()
 writeToHTML filePath content = do
-  handle <- openFile filePath WriteMode
-  hPutStrLn handle content
-  hClose handle
+  let tags = [TagOpen "html" [], TagOpen "body" []] ++ parseTags content ++ [TagClose "body", TagClose "html"]
+  writeToFile filePath (renderTags tags)
 
-readCSV :: String -> IO [Row]
+readCSV :: String -> IO [CSVRow]
 readCSV filePath = do
   fileData <- readMyFile filePath
   let fileLines = lines fileData

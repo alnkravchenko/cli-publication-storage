@@ -1,24 +1,11 @@
--- {-# LANGUAGE AllowAmbiguousTypes #-}
 module Main where
 
 import CLI                 (CLI (CLI), createDB, parseCommand, processCommand)
 import Control.Monad       (when)
 import Data.Data           (Data)
-import Data.List           (intercalate)
-import FilesystemUtils     (writeToHTML, writeToTXT)
-import Helpers
-    ( City (City)
-    , Country (Canada, France, USA, Ukraine)
-    , Creator (Authors)
-    , Pages (Pages)
-    , Person (Person)
-    , Publisher (Conference, Journal, PublishingHouse)
-    )
-import Publication         (Publication (Article, Book, Summary))
-import PublicationsService
-    ( PubStorageUtils (findAllConferences, findAllJournals, findAllPublishingHouses, getCategoryByTitle, getStatsByPublicationType, searchByAuthor, searchByAuthorExcl)
-    , PublicationsService (StorePublications)
-    )
+import FilesystemUtils     (createFile, writeToHTML, writeToTXT)
+import Publication         (Publication)
+import PublicationsService (PublicationsService)
 
 
 main :: IO ()
@@ -33,7 +20,9 @@ main = do
   let outputFunc = case mode of
         0 -> putStrLn
         1 -> writeToTXT "./data/out.txt"
-        2 -> writeToHTML "./data/out.html"
+        2 -> do
+          createFile "./data" "out.html"
+          writeToHTML "./data/out.html"
         3 -> (\x -> putStr "")
 
   putStrLn "Provide a path to the database folder: "
